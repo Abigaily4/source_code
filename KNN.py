@@ -1,23 +1,31 @@
-from sklearn.cluster import KMeans
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
-movies = [
-    {"title":"Movie 1","features":[9, 1]},  # lots of action, little sci-fi
-    {"title":"Movie 2","features":[8, 2]},  # lots of action, some sci-fi
-    {"title":"Movie 3","features":[3, 7]},  # some action, lots of sci-fi
-    {"title":"Movie 4","features":[4, 6]},  # some action, lots of sci-fi
-    {"title":"Movie 5","features":[1, 8]},  # little action, lots of sci-fi
-    {"title":"Movie 6","features":[9, 9]},  # lots of action, lots of sci-fi
-]
+# Load song data
+df = pd.read_csv('SONGS.csv')
 
-feature_vectors = [movie["features"] for movie in movies]
-kmeans = KMeans(n_clusters=2).fit(feature_vectors)
+# Combine all your features into a single string
+df['combined_features'] = df['SONGS'] + df['GENRES']  # Add more features if you have
 
-liked_movie = "Movie 6"
-liked_movie_features = next(movie["features"] for movie in movies if movie["title"] == liked_movie)
-liked_movie_cluster = kmeans.predict([liked_movie_features])[0]
+# Create a TF-IDF vectorizer. This will convert your combined features into a matrix of TF-IDF features.
+vectorizer = TfidfVectorizer()
+tfidf_matrix = vectorizer.fit_transform(df['combined_features'])
 
-recommended_movies = [movie for movie in movies if movie["title"] != liked_movie and kmeans.predict([movie["features"]])[0] == liked_movie_cluster]
+# Calculate the cosine similarity matrix
+cosine_sim_matrix = cosine_similarity(tfidf_matrix)
 
-print("We recommend:")
-for recommended_movie in recommended_movies:
-    print(recommended_movie["title"])
+# Let's say you want to find similar songs for a specific song at index 1 in the dataframe
+selected_song_index = 7
+
+# Get the cosine similarities of the selected song with all other songs
+similarities = cosine_sim_matrix[selected_song_index]
+
+# Sort the similarities in descending order and get the indices of the most similar songs
+most_similar_song_indices = similarities.argsort()[::-1]
+
+# Exclude the selected song itself from the recommended songs
+recommended_songs = most_similar_song_indices[1:]
+
+# Print the recommended songs
+print(df.loc[recommended_songs])
